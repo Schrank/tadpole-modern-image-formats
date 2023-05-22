@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <service id="Tadpole\ModernImageFormats\Subscriber\CreateWebpOnThumbnailWrite">
+            <tag name="kernel.event_subscriber"/>
+        </service>
+        <service id="Tadpole\ModernImageFormats\Command\ImageConverter" autowire="true">
+            <argument type="service" id="shopware.filesystem.public" key="$filesystemPublic"/>
+            <argument type="service" id="shopware.filesystem.private" key="$filesystemPrivate"/>
+            <tag name="console.command"/>
+        </service>
+    </services>
+</container>
