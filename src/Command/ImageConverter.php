@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Tadpole\ModernImageFormats\Command;
 
 use League\Flysystem\FilesystemOperator;
+use Shopware\Core\Content\Media\Aggregate\MediaFolderConfiguration\MediaFolderConfigurationEntity;
 use Shopware\Core\Content\Media\Aggregate\MediaThumbnail\MediaThumbnailEntity;
+use Shopware\Core\Content\Media\Aggregate\MediaThumbnailSize\MediaThumbnailSizeEntity;
 use Shopware\Core\Content\Media\Exception\ThumbnailCouldNotBeSavedException;
 use Shopware\Core\Content\Media\Exception\ThumbnailNotSupportedException;
 use Shopware\Core\Content\Media\MediaEntity;
@@ -45,10 +47,12 @@ class ImageConverter extends Command
 
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output): void
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->io = new ShopwareStyle($input, $output);
         $this->convertToWebp();
+
+        return 0;
     }
 
     private function convertToWebp(): void
@@ -65,25 +69,6 @@ class ImageConverter extends Command
         $result = $this->generateWebpImages($mediaThumbnailIterator, $context);
 
         $this->io->progressFinish();
-        $this->io->table(
-            ['Action', 'Number of Media Entities'],
-            [
-                ['Generated', $result['generated']],
-                ['Skipped', $result['skipped']],
-                ['Errors', $result['errored']],
-            ]
-        );
-
-        if (is_countable($result['errors']) ? \count($result['errors']) : 0) {
-            if ($this->io->isVerbose()) {
-                $this->io->table(
-                    ['Error messages'],
-                    $result['errors']
-                );
-            } else {
-                $this->io->warning(\sprintf('Thumbnail generation for %d file(s) failed. Use -v to show the files', is_countable($result['errors']) ? \count($result['errors']) : 0));
-            }
-        }
     }
 
     private function createCriteria(): Criteria
@@ -91,7 +76,7 @@ class ImageConverter extends Command
         $criteria = new Criteria();
         $criteria->setOffset(0);
         $criteria->setLimit($this->batchSize);
-        $criteria->addAssociation('media');
+        $criteria->addAssociation('media.mediaFolder.configuration.mediaThumbnailSizes');
 
         return $criteria;
     }
@@ -109,18 +94,84 @@ class ImageConverter extends Command
                     throw new ThumbnailNotSupportedException($mediaThumbnail->getId());
                 }
                 $originalImageSize = $this->getOriginalImageSize($image);
-                $thumbnailSize = ['width' => $mediaThumbnail->getWidth(), 'height' => $mediaThumbnail->getHeight()];
+                $expectedthumbnailSize = new MediaThumbnailSizeEntity();
+                $mediaFolder = $mediaThumbnail->getMedia()->getMediaFolder();
+                $expectedthumbnailSize->assign([
+                        'height' => $mediaThumbnail->getHeight(),
+                        'width' => $mediaThumbnail->getWidth(),
+                        'mediaFolderConfigurations' => $mediaFolder->getConfiguration()]
+                );
+                $thumbnailSize = $this->calculateThumbnailSize($originalImageSize, $expectedthumbnailSize, $mediaFolder->getConfiguration());
                 $webpImage = $this->createNewImage($image, $mediaThumbnail->getMedia()->getMediaType(), $originalImageSize, $thumbnailSize);
                 $webpFilePath = $this->urlGenerator->getRelativeThumbnailUrl(
                         $mediaThumbnail->getMedia(),
                         $mediaThumbnail
                     ) . '.webp';
 
-                $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 100);
+                $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80);
             }
             $this->io->progressAdvance($result->count());
         }
         return [];
+    }
+
+    /**
+     * @param array{width: int, height: int} $imageSize
+     *
+     * @return array{width: int, height: int}
+     */
+    private function calculateThumbnailSize(
+        array                          $imageSize,
+        MediaThumbnailSizeEntity       $preferredThumbnailSize,
+        MediaFolderConfigurationEntity $config
+    ): array
+    {
+        if (!$config->getKeepAspectRatio() || $preferredThumbnailSize->getWidth() !== $preferredThumbnailSize->getHeight()) {
+            $calculatedWidth = $preferredThumbnailSize->getWidth();
+            $calculatedHeight = $preferredThumbnailSize->getHeight();
+
+            $useOriginalSizeInThumbnails = $imageSize['width'] < $calculatedWidth || $imageSize['height'] < $calculatedHeight;
+
+            return $useOriginalSizeInThumbnails ? [
+                'width' => $imageSize['width'],
+                'height' => $imageSize['height'],
+            ] : [
+                'width' => $calculatedWidth,
+                'height' => $calculatedHeight,
+            ];
+        }
+
+        if ($imageSize['width'] >= $imageSize['height']) {
+            $aspectRatio = $imageSize['height'] / $imageSize['width'];
+
+            $calculatedWidth = $preferredThumbnailSize->getWidth();
+            $calculatedHeight = (int)ceil($preferredThumbnailSize->getHeight() * $aspectRatio);
+
+            $useOriginalSizeInThumbnails = $imageSize['width'] < $calculatedWidth || $imageSize['height'] < $calculatedHeight;
+
+            return $useOriginalSizeInThumbnails ? [
+                'width' => $imageSize['width'],
+                'height' => $imageSize['height'],
+            ] : [
+                'width' => $calculatedWidth,
+                'height' => $calculatedHeight,
+            ];
+        }
+
+        $aspectRatio = $imageSize['width'] / $imageSize['height'];
+
+        $calculatedWidth = (int)ceil($preferredThumbnailSize->getWidth() * $aspectRatio);
+        $calculatedHeight = $preferredThumbnailSize->getHeight();
+
+        $useOriginalSizeInThumbnails = $imageSize['width'] < $calculatedWidth || $imageSize['height'] < $calculatedHeight;
+
+        return $useOriginalSizeInThumbnails ? [
+            'width' => $imageSize['width'],
+            'height' => $imageSize['height'],
+        ] : [
+            'width' => $calculatedWidth,
+            'height' => $calculatedHeight,
+        ];
     }
 
     private function getFileSystem(MediaEntity $media): FilesystemOperator
@@ -190,7 +241,6 @@ class ImageConverter extends Command
 
         try {
             $this->getFileSystem($media)->write($filePath, (string)$imageFile);
-            echo $filePath . "\n";
         } catch (\Exception) {
             throw new ThumbnailCouldNotBeSavedException($filePath);
         }
