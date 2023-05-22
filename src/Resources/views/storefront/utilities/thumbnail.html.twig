@@ -1,0 +1,30 @@
+{% sw_extends "@Storefront/storefront/utilities/thumbnail.html.twig" %}
+
+{% block thumbnail_utility_img %}
+    <picture>
+        <source
+                type="image/webp"
+                srcset="
+                {% apply spaceless %}
+                    {% for thumbnail in thumbnails %}{{ thumbnail.url | sw_encode_url }}.webp {{ thumbnail.width }}w{% if not loop.last %}, {% endif %}{% endfor %}
+                {% endapply %}"
+                {% if sizes['default'] %}
+                    sizes="{{ sizes['default'] }}"
+                {% elseif sizes|length > 0 %}
+                    sizes="{{ sizesValue }}"
+                {% endif %}
+        />
+        <img {% if load %}src="{{ media|sw_encode_media_url }}"
+             {% else %}data-src="{{ media|sw_encode_media_url }}" {% endif %}
+             {% if media.thumbnails|length > 0 %}
+                 {% if load %}srcset="{{ srcsetValue }}" {% else %}data-srcset="{{ srcsetValue }}" {% endif %}
+                 {% if sizes['default'] %}
+                    sizes="{{ sizes['default'] }}"
+                 {% elseif sizes|length > 0 %}
+                    sizes="{{ sizesValue }}"
+                 {% endif %}
+             {% endif %}
+             {% for key, value in attributes %}{% if value != '' %} {{ key }}="{{ value }}"{% endif %}{% endfor %}
+        />
+    </picture>
+{% endblock %}
