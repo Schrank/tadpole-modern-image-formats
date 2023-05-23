@@ -8,9 +8,11 @@
         <service id="Tadpole\ModernImageFormats\Subscriber\CreateWebpOnThumbnailWrite">
             <tag name="kernel.event_subscriber"/>
         </service>
-        <service id="Tadpole\ModernImageFormats\Command\ImageConverter" autowire="true">
+        <service id="Tadpole\ModernImageFormats\Service\ImageConverter" autowire="true">
             <argument type="service" id="shopware.filesystem.public" key="$filesystemPublic"/>
             <argument type="service" id="shopware.filesystem.private" key="$filesystemPrivate"/>
+        </service>
+        <service id="Tadpole\ModernImageFormats\Command\ImageConverter" autowire="true">
             <tag name="console.command"/>
         </service>
     </services>
