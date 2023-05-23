@@ -5,7 +5,7 @@
         {% for thumbnail in thumbnails %}{{ thumbnail.url | sw_encode_url }}{% if media.mimeType !== "image/webp" %}.webp{% endif %} {{ thumbnail.width }}w{% if not loop.last %}, {% endif %}{% endfor %}
     {% endapply %}{% endset %}
     {% set srcsetsavif %}{% apply spaceless %}
-        {% for thumbnail in thumbnails %}{{ thumbnail.url | sw_encode_url }}{% if media.mimeType !== "image/webp" %}.avif{% endif %} {{ thumbnail.width }}w{% if not loop.last %}, {% endif %}{% endfor %}
+        {% for thumbnail in thumbnails %}{{ thumbnail.url | sw_encode_url }}{% if media.mimeType !== "image/avif" %}.avif{% endif %} {{ thumbnail.width }}w{% if not loop.last %}, {% endif %}{% endfor %}
     {% endapply %}{% endset %}
     {% if srcsets != "" %}
     <picture>
