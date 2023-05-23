@@ -14,6 +14,7 @@ use Shopware\Core\Content\Media\MediaType\ImageType;
 use Shopware\Core\Content\Media\MediaType\MediaType;
 use Shopware\Core\Content\Media\Pathname\UrlGeneratorInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
+use Symfony\Component\Console\Output\OutputInterface;
 
 class ImageConverter
 {
@@ -28,36 +29,44 @@ class ImageConverter
 
     }
 
-    public function generateWebpImages(RepositoryIterator $iterator, $io): array
+    public function generateWebpImages(RepositoryIterator $iterator, OutputInterface $io = null): array
     {
         while (($result = $iterator->fetch()) !== null) {
             /** @var MediaThumbnailEntity $mediaThumbnail */
             foreach ($result->getEntities() as $mediaThumbnail) {
-                $filePath = $this->urlGenerator->getRelativeMediaUrl($mediaThumbnail->getMedia());
-                /** @var string $file */
-                $file = $this->getFileSystem($mediaThumbnail->getMedia())->read($filePath);
-                $image = @imagecreatefromstring($file);
-                if ($image === false) {
-                    throw new ThumbnailNotSupportedException($mediaThumbnail->getId());
-                }
-                $originalImageSize = $this->getOriginalImageSize($image);
-                $expectedThumbnailSize = new MediaThumbnailSizeEntity();
-                $mediaFolder = $mediaThumbnail->getMedia()->getMediaFolder();
-                $expectedThumbnailSize->assign([
-                        'height' => $mediaThumbnail->getHeight(),
-                        'width' => $mediaThumbnail->getWidth(),
-                        'mediaFolderConfigurations' => $mediaFolder->getConfiguration()]
-                );
-                $thumbnailSize = $this->calculateThumbnailSize($originalImageSize, $expectedThumbnailSize, $mediaFolder->getConfiguration());
-                $webpImage = $this->createNewImage($image, $mediaThumbnail->getMedia()->getMediaType(), $originalImageSize, $thumbnailSize);
                 $webpFilePath = $this->urlGenerator->getRelativeThumbnailUrl(
                         $mediaThumbnail->getMedia(),
                         $mediaThumbnail
                     ) . '.webp';
 
-                $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80);
+                if ($this->getFileSystem($mediaThumbnail->getMedia())->fileExists($webpFilePath)) {
+
+                    $filePath = $this->urlGenerator->getRelativeMediaUrl($mediaThumbnail->getMedia());
+                    /** @var string $file */
+                    $file = $this->getFileSystem($mediaThumbnail->getMedia())->read($filePath);
+                    $image = @imagecreatefromstring($file);
+                    if ($image === false) {
+                        throw new ThumbnailNotSupportedException($mediaThumbnail->getId());
+                    }
+                    $originalImageSize = $this->getOriginalImageSize($image);
+                    $expectedThumbnailSize = new MediaThumbnailSizeEntity();
+                    $mediaFolder = $mediaThumbnail->getMedia()->getMediaFolder();
+                    $expectedThumbnailSize->assign([
+                            'height' => $mediaThumbnail->getHeight(),
+                            'width' => $mediaThumbnail->getWidth(),
+                            'mediaFolderConfigurations' => $mediaFolder->getConfiguration()]
+                    );
+                    $thumbnailSize = $this->calculateThumbnailSize($originalImageSize, $expectedThumbnailSize, $mediaFolder->getConfiguration());
+                    $webpImage = $this->createNewImage($image, $mediaThumbnail->getMedia()->getMediaType(), $originalImageSize, $thumbnailSize);
+
+
+                    $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80);
+
+                }
             }
-            $io->progressAdvance($result->count());
+            if ($io) {
+                $io->progressAdvance($result->count());
+            }
         }
         return [];
     }
