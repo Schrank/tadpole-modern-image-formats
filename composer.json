@@ -1,40 +1,50 @@
 {
-    "name": "tadpole/modern-image-formats",
-    "description": "Support for modern image formats like webp and avif in shopware6",
-    "type": "shopware-platform-plugin",
-    "license": "MIT",
-    "version": "1.0.0",
-    "authors": [
-        {
-            "name": "Björn Meyer",
-            "email": "bjoern@brocksi.net",
-            "homepage": "https://brocksi.net"
-        },
-        {
-            "name": "Fabian Blechschmidt",
-            "email": "fabian@winkelwagen.de",
-            "homepage": "https://www.winkelwagen.de"
-        }
-    ],
-    "autoload": {
-        "psr-4": {
-            "Tadpole\\ModernImageFormats\\": "src/"
-        }
+  "name": "tadpole/modern-image-formats",
+  "description": "Support for modern image formats like webp and avif in shopware6",
+  "type": "shopware-platform-plugin",
+  "license": "MIT",
+  "version": "1.0.0",
+  "authors": [
+    {
+      "name": "Björn Meyer",
+      "email": "bjoern@brocksi.net",
+      "homepage": "https://brocksi.net"
     },
-    "require": {
-        "php": ">=8.1",
-        "ext-gd": "*",
-        "shopware/core": "~6.5",
-        "shopware/storefront": "~6.5"
+    {
+      "name": "Fabian Blechschmidt",
+      "email": "fabian@winkelwagen.de",
+      "homepage": "https://www.winkelwagen.de"
     },
-    "require-dev": {
-        "phpunit/phpunit": "^10"
+    {
+      "name": "Marc Cheng",
+      "email": "m.cheng@wistundcheng.de",
+      "homepage": "https://www.wistundlaumann.de"
     },
-    "extra": {
-        "shopware-plugin-class": "Tadpole\\ModernImageFormats\\TadpoleModernImageFormats",
-        "label": {
-            "de-DE": "Unterstützung für moderne Bildformate, wie WebP und AVIF.",
-            "en-GB": "Support for modern image formats like webp and avif in shopware6."
-        }
+    {
+      "name": "Tobi Vogt",
+      "email": "tobi@webguys.de",
+      "homepage": "https://www.webguys.de"
     }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Tadpole\\ModernImageFormats\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.1",
+    "ext-gd": "*",
+    "shopware/core": "~6.5",
+    "shopware/storefront": "~6.5"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10"
+  },
+  "extra": {
+    "shopware-plugin-class": "Tadpole\\ModernImageFormats\\TadpoleModernImageFormats",
+    "label": {
+      "de-DE": "Unterstützung für moderne Bildformate, wie WebP und AVIF.",
+      "en-GB": "Support for modern image formats like webp and avif in shopware6."
+    }
+  }
 }
