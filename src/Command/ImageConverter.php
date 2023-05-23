@@ -7,11 +7,9 @@ use Shopware\Core\Framework\Adapter\Console\ShopwareStyle;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepository;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Tadpole\ModernImageFormats\Service\ImageConverter as ImageConverterService;
 
@@ -50,7 +48,7 @@ class ImageConverter extends Command
         $mediaThumbnailIterator = new RepositoryIterator(
             $this->mediaThumbnailRepository,
             $context,
-            $this->createThumbnailCriteria()
+            $this->imageConverterService->createThumbnailCriteria()
         );
 
         $totalMediaThumbnailCount = $mediaThumbnailIterator->getTotal();
@@ -64,16 +62,6 @@ class ImageConverter extends Command
         $io->progressFinish();
 
         return 0;
-    }
-
-    private function createThumbnailCriteria(): Criteria
-    {
-        $criteria = new Criteria();
-        $criteria->setOffset(0);
-        $criteria->setLimit($this->batchSize);
-        $criteria->addAssociation('media.mediaFolder.configuration.mediaThumbnailSizes');
-
-        return $criteria;
     }
 
 

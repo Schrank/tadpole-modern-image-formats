@@ -15,8 +15,8 @@ Organized by [Firegento](https://shop.firegento.com/).
 ### Features
 * Adds picture tag to template with additional source to webp images
 * Console command to generate webp images
+* Subscriber on "media.entity.written" to creat webp after upload via admin
 
 ### Next features
-* Listener that generates webp images after upload
 * AVIF Format Support
-* Support for Media Gallery
+* Support for Media Gallery (main image)

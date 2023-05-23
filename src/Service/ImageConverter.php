@@ -14,6 +14,7 @@ use Shopware\Core\Content\Media\MediaType\ImageType;
 use Shopware\Core\Content\Media\MediaType\MediaType;
 use Shopware\Core\Content\Media\Pathname\UrlGeneratorInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\RepositoryIterator;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 
 class ImageConverter
 {
@@ -28,7 +29,7 @@ class ImageConverter
 
     }
 
-    public function generateWebpImages(RepositoryIterator $iterator, $io): array
+    public function generateWebpImages(RepositoryIterator $iterator, $io = null): array
     {
         while (($result = $iterator->fetch()) !== null) {
             /** @var MediaThumbnailEntity $mediaThumbnail */
@@ -57,9 +58,36 @@ class ImageConverter
 
                 $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80);
             }
-            $io->progressAdvance($result->count());
+            if ($io) {
+                $io->progressAdvance($result->count());
+            }
         }
         return [];
+    }
+
+    private function getMediaConfiguration()
+    {
+
+    }
+
+    private function getFileSystem(MediaEntity $media): FilesystemOperator
+    {
+        if ($media->isPrivate()) {
+            return $this->filesystemPrivate;
+        }
+
+        return $this->filesystemPublic;
+    }
+
+    /**
+     * @return array{width: int, height: int}
+     */
+    private function getOriginalImageSize(\GdImage $image): array
+    {
+        return [
+            'width' => imagesx($image),
+            'height' => imagesy($image),
+        ];
     }
 
     /**
@@ -124,26 +152,6 @@ class ImageConverter
         ];
     }
 
-    private function getFileSystem(MediaEntity $media): FilesystemOperator
-    {
-        if ($media->isPrivate()) {
-            return $this->filesystemPrivate;
-        }
-
-        return $this->filesystemPublic;
-    }
-
-    /**
-     * @return array{width: int, height: int}
-     */
-    private function getOriginalImageSize(\GdImage $image): array
-    {
-        return [
-            'width' => imagesx($image),
-            'height' => imagesy($image),
-        ];
-    }
-
     private function createNewImage(\GdImage $mediaImage, MediaType $type, array $originalImageSize, array $thumbnailSize): \GdImage
     {
         $thumbnail = imagecreatetruecolor($thumbnailSize['width'], $thumbnailSize['height']);
@@ -194,5 +202,15 @@ class ImageConverter
         } catch (\Exception) {
             throw new ThumbnailCouldNotBeSavedException($filePath);
         }
+    }
+
+    public function createThumbnailCriteria(array $ids = null): Criteria
+    {
+        $criteria = new Criteria($ids);
+        $criteria->setOffset(0);
+        $criteria->setLimit($this->batchSize);
+        $criteria->addAssociation('media.mediaFolder.configuration.mediaThumbnailSizes');
+
+        return $criteria;
     }
 }
