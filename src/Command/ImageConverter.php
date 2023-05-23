@@ -34,12 +34,12 @@ class ImageConverter extends Command
 
     protected function configure(): void
     {
-//        $this->addOption(
-//            'strict',
-//            's',
-//            InputOption::VALUE_NONE,
-//            'Additionally checks that physical files for existing thumbnails are present'
-//        );
+        $this->addOption(
+            'force',
+            'f',
+            InputOption::VALUE_NONE,
+            'recreates all images, even if they already exist in the file system'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -55,11 +55,11 @@ class ImageConverter extends Command
 
         $totalMediaThumbnailCount = $mediaThumbnailIterator->getTotal();
         $io->comment(
-            sprintf('Generating webp images for %d thumbnails. This may take some time...', $totalMediaThumbnailCount)
+            sprintf('Generating webp and avif images for %d thumbnails. This may take some time...', $totalMediaThumbnailCount)
         );
         $io->progressStart($totalMediaThumbnailCount);
 
-        $this->imageConverterService->generateWebpImages($mediaThumbnailIterator, $io);
+        $this->imageConverterService->generateImages($mediaThumbnailIterator, $input->getOption('force'), $io);
 
         $io->progressFinish();
 

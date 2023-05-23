@@ -29,7 +29,7 @@ class ImageConverter
 
     }
 
-    public function generateWebpImages(RepositoryIterator $iterator, OutputInterface $io = null): array
+    public function generateImages(RepositoryIterator $iterator, $force = false, OutputInterface $io = null): array
     {
         while (($result = $iterator->fetch()) !== null) {
             /** @var MediaThumbnailEntity $mediaThumbnail */
@@ -39,7 +39,14 @@ class ImageConverter
                         $mediaThumbnail
                     ) . '.webp';
 
-                if ($this->getFileSystem($mediaThumbnail->getMedia())->fileExists($webpFilePath)) {
+                $avifFilePath = $this->urlGenerator->getRelativeThumbnailUrl(
+                        $mediaThumbnail->getMedia(),
+                        $mediaThumbnail
+                    ) . '.avif';
+
+                $fileSystem = $this->getFileSystem($mediaThumbnail->getMedia());
+
+                if (!$fileSystem->fileExists($webpFilePath) || !$fileSystem->fileExists($avifFilePath) || $force) {
 
                     $filePath = $this->urlGenerator->getRelativeMediaUrl($mediaThumbnail->getMedia());
                     /** @var string $file */
@@ -59,8 +66,13 @@ class ImageConverter
                     $thumbnailSize = $this->calculateThumbnailSize($originalImageSize, $expectedThumbnailSize, $mediaFolder->getConfiguration());
                     $webpImage = $this->createNewImage($image, $mediaThumbnail->getMedia()->getMediaType(), $originalImageSize, $thumbnailSize);
 
+                    if (!$fileSystem->fileExists($webpFilePath) || $force) {
+                        $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80, 'webp');
+                    }
 
-                    $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $webpFilePath, 80);
+                    if (!$fileSystem->fileExists($avifFilePath) || $force) {
+                        $this->writeThumbnail($webpImage, $mediaThumbnail->getMedia(), $avifFilePath, 80, 'avif');
+                    }
 
                 }
             }
@@ -185,15 +197,27 @@ class ImageConverter
         return $thumbnail;
     }
 
-    private function writeThumbnail(\GdImage $thumbnail, MediaEntity $media, string $filePath, int $quality): void
+    private function writeThumbnail(\GdImage $thumbnail, MediaEntity $media, string $filePath, int $quality, $type = 'webp'): void
     {
         ob_start();
 
-        if (!\function_exists('imagewebp')) {
+        if ($type == 'webp') {
+
+            if (!\function_exists('imagewebp')) {
+                throw new ThumbnailCouldNotBeSavedException($filePath);
+            }
+            imagewebp($thumbnail, null, $quality);
+
+        } elseif ($type == 'avif') {
+
+            if (!\function_exists('imageavif')) {
+                throw new ThumbnailCouldNotBeSavedException($filePath);
+            }
+            imageavif($thumbnail, null, $quality);
+
+        } else {
             throw new ThumbnailCouldNotBeSavedException($filePath);
         }
-
-        imagewebp($thumbnail, null, $quality);
 
         $imageFile = ob_get_contents();
         ob_end_clean();
