@@ -43,14 +43,25 @@ class ImageConverter
                 }
                 $originalImageSize = $this->getOriginalImageSize($image);
                 $expectedThumbnailSize = new MediaThumbnailSizeEntity();
-                $mediaFolder = $mediaThumbnail->getMedia()->getMediaFolder();
+                $mediaFolderConfig = $this->getMediaConfiguration($mediaThumbnail);
+                if ($mediaFolderConfig === null) {
+                    continue;
+                }
                 $expectedThumbnailSize->assign([
                         'height' => $mediaThumbnail->getHeight(),
                         'width' => $mediaThumbnail->getWidth(),
-                        'mediaFolderConfigurations' => $mediaFolder->getConfiguration()]
+                        'mediaFolderConfigurations' => $mediaFolderConfig]
                 );
-                $thumbnailSize = $this->calculateThumbnailSize($originalImageSize, $expectedThumbnailSize, $mediaFolder->getConfiguration());
-                $webpImage = $this->createNewImage($image, $mediaThumbnail->getMedia()->getMediaType(), $originalImageSize, $thumbnailSize);
+                $thumbnailSize = $this->calculateThumbnailSize(
+                    $originalImageSize,
+                    $expectedThumbnailSize,
+                    $mediaFolderConfig
+                );
+                $mediaType = $this->getMediaType($mediaThumbnail);
+                if ($mediaType === null) {
+                    continue;
+                }
+                $webpImage = $this->createNewImage($image, $mediaType, $originalImageSize, $thumbnailSize);
                 $webpFilePath = $this->urlGenerator->getRelativeThumbnailUrl(
                         $mediaThumbnail->getMedia(),
                         $mediaThumbnail
@@ -65,9 +76,23 @@ class ImageConverter
         return [];
     }
 
-    private function getMediaConfiguration()
+    private function getMediaType(MediaThumbnailEntity $mediaThumbnail): ?MediaType
     {
+        $media = $mediaThumbnail->getMedia();
+        return ($media) ? $media->getMediaType() : null;
+    }
 
+    private function getMediaConfiguration(MediaThumbnailEntity $mediaThumbnail): ?MediaFolderConfigurationEntity
+    {
+        $media = $mediaThumbnail->getMedia();
+        if ($media) {
+            $mediaFolder = $media->getMediaFolder();
+            if ($mediaFolder) {
+                $mediaFolderConfiguration = $mediaFolder->getConfiguration();
+            }
+        }
+
+        return $mediaFolderConfiguration ?? null;
     }
 
     private function getFileSystem(MediaEntity $media): FilesystemOperator

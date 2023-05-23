@@ -1,10 +1,19 @@
 {% sw_extends "@Storefront/storefront/utilities/thumbnail.html.twig" %}
 
 {% block thumbnail_utility_img %}
+    {% set useModernImageFormats = config('TadpoleModernImageFormats.config.useModernImageFormatsInFrontends') %}
+    {# before you use the template run the console command to generate webp or avif #}
+    {% if (useModernImageFormats != "true") %}
+        {{ parent() }}
+    {% endif %}
     {% set srcsets %}{% apply spaceless %}
         {% for thumbnail in thumbnails %}{{ thumbnail.url | sw_encode_url }}{% if media.mimeType !== "image/webp" %}.webp{% endif %} {{ thumbnail.width }}w{% if not loop.last %}, {% endif %}{% endfor %}
     {% endapply %}{% endset %}
-    {% if srcsets != "" %}
+    {# when no thumbnails are generated we expecte also no webp/avif is generated and fallback to parent #}
+    {% if srcsets == ""  %}
+        {{ parent() }}
+    {% endif %}
+
     <picture>
         <source
                 type="image/webp"
@@ -28,7 +37,4 @@
              {% for key, value in attributes %}{% if value != '' %} {{ key }}="{{ value }}"{% endif %}{% endfor %}
         />
     </picture>
-    {% else %}
-        {{ parent() }}
-    {% endif %}
 {% endblock %}
